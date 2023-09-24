@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Category Manager</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/all.min.css">
+</head>
+
+<body>
+	<nav class="navbar navbar-dark bg-dark">
+		<div class="container" style="max-width: 600px">
+			<a href="#" class="navbar-brand">Category</a>
+		</div>
+	</nav>
+	<div class="container" style="max-width: 600px;">
+		<div class="input-group my-4">
+			<input type="text" class="form-control" id="input">
+			<button class="btn btn-dark">Add</button>
+		</div>
+		<ul class="list-group" id="list"></ul>
+	</div>
+
+	<script>
+		const api = "http://localhost:8000/api/categories";
+
+		fetch(api)
+			.then(res => res.json())
+			.then(json => json.map(category => {
+				createItem(category);
+			}));
+
+		document.querySelector("button").onclick = () => {
+			let text = document.querySelector("#input").value;
+			if (!text) return false;
+
+			fetch(api, {
+				method: "post",
+				body: JSON.stringify({ name: text }),
+				headers: {
+					"Content-Type": "application/json"
+				}
+			})
+				.then(res => res.json())
+				.then(json => createItem(json));
+
+			document.querySelector("#input").value = "";
+			document.querySelector("#input").focus();
+		}
+
+		function createItem(category) {
+			let li = document.createElement("li");
+			li.classList.add("list-group-item");
+			li.innerHTML = `<span>${category.name}</span>`;
+
+			let del = document.createElement("a");
+			del.setAttribute("href", "#");
+			del.classList.add("fa-solid", "fa-trash", "text-danger", "float-end");
+			del.onclick = () => {
+				fetch(`${api}/${category.id}`, { method: 'DELETE' });
+				li.remove();
+			}
+			li.appendChild(del);
+
+			let edit = document.createElement("a");
+			edit.setAttribute("href", "#");
+			edit.classList.add("fa-solid", "fa-edit", "float-end", "me-3");
+			edit.onclick = () => {
+				let update = prompt("Category Name", li.querySelector("span").textContent);
+				li.querySelector("span").textContent = update;
+
+				fetch(`${api}/${category.id}`, {
+					method: 'PUT',
+					body: JSON.stringify({ name: update }),
+					headers: {
+						"Content-Type": "application/json"
+					}
+				});
+			}
+			li.appendChild(edit);
+
+			document.querySelector("#list").appendChild(li);
+		}
+	</script>
+</body>
+
+</html>
