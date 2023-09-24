@@ -25,12 +25,17 @@
 
 	<script>
 		const api = "http://localhost:8000/api/categories";
+		const token = "1|laravel_sanctum_Eg5q1IAlwg85hWEbwZhppab6ePvfGg9pI7CIUJpJ6b673c07";
 
-		fetch(api)
-			.then(res => res.json())
-			.then(json => json.map(category => {
-				createItem(category);
-			}));
+		fetch(api, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		})
+		.then(res => res.json())
+		.then(json => json.map(category => {
+			createItem(category);
+		}));
 
 		document.querySelector("button").onclick = () => {
 			let text = document.querySelector("#input").value;
@@ -40,7 +45,8 @@
 				method: "post",
 				body: JSON.stringify({ name: text }),
 				headers: {
-					"Content-Type": "application/json"
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${token}`
 				}
 			})
 				.then(res => res.json())
@@ -59,7 +65,12 @@
 			del.setAttribute("href", "#");
 			del.classList.add("fa-solid", "fa-trash", "text-danger", "float-end");
 			del.onclick = () => {
-				fetch(`${api}/${category.id}`, { method: 'DELETE' });
+				fetch(`${api}/${category.id}`, {
+					method: 'DELETE',
+					headers: {
+						"Authorization": `Bearer ${token}`,
+					}
+				});
 				li.remove();
 			}
 			li.appendChild(del);
@@ -75,7 +86,8 @@
 					method: 'PUT',
 					body: JSON.stringify({ name: update }),
 					headers: {
-						"Content-Type": "application/json"
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${token}`
 					}
 				});
 			}
