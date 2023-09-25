@@ -13,35 +13,78 @@
 	<nav class="navbar navbar-dark bg-dark">
 		<div class="container" style="max-width: 600px">
 			<a href="#" class="navbar-brand">Category</a>
+			<ul class="navbar-nav">
+				<li class="nav-item">
+					<a href="#" id="logout" class="nav-link">Logout</a>
+				</li>
+			</ul>
 		</div>
 	</nav>
 	<div class="container" style="max-width: 600px;">
-		<div class="input-group my-4">
-			<input type="text" class="form-control" id="input">
-			<button class="btn btn-dark">Add</button>
+		<div id="error" class="alert alert-warning mt-4 d-none">
+			Unable to connect
 		</div>
-		<ul class="list-group" id="list"></ul>
+
+		<div id="login" class="text-center mt-4 d-none">
+			<h2 class="h3">Login</h2>
+			<form id="login-form">
+				<input type="text" id="email" placeholder="Email" class="form-control mb-2">
+				<input type="password" id="password" placeholder="Password" class="form-control mb-2">
+				<button class="btn btn-dark w-100">Login</button>
+			</form>
+		</div>
+
+		<div id="home" class="d-none">
+			<div class="input-group my-4">
+				<input type="text" class="form-control" id="input">
+				<button id="add" class="btn btn-dark">Add</button>
+			</div>
+			<ul class="list-group" id="list"></ul>
+		</div>
 	</div>
 
 	<script>
-		const api = "http://localhost:8000/api/categories";
-		const token = "1|laravel_sanctum_Eg5q1IAlwg85hWEbwZhppab6ePvfGg9pI7CIUJpJ6b673c07";
+		const api = "http://localhost:8000/api";
 
-		fetch(api, {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		})
-		.then(res => res.json())
-		.then(json => json.map(category => {
-			createItem(category);
-		}));
+		init();
 
-		document.querySelector("button").onclick = () => {
+		function getToken() {
+			return localStorage.getItem("token");
+		}
+
+		function init() {
+			const token = getToken();
+
+			fetch(`${api}/categories`, {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			})
+				.then(res => res.json())
+				.then(data => {
+					// Clearing the list before adding
+					// to avoid duplication
+					document.querySelector("#list").innerHTML = "";
+
+					data.map(category => {
+						createItem(category);
+					});
+
+					showHome();
+				})
+				.catch(() => {
+					showError("Unable to fetch data from API");
+					showLogin();
+				});
+		}
+
+		document.querySelector("#add").onclick = () => {
+			const token = getToken();
+
 			let text = document.querySelector("#input").value;
 			if (!text) return false;
 
-			fetch(api, {
+			fetch(`${api}/categories`, {
 				method: "post",
 				body: JSON.stringify({ name: text }),
 				headers: {
@@ -49,14 +92,73 @@
 					"Authorization": `Bearer ${token}`
 				}
 			})
-				.then(res => res.json())
-				.then(json => createItem(json));
+			.then(res => res.json())
+			.then(json => createItem(json));
 
 			document.querySelector("#input").value = "";
 			document.querySelector("#input").focus();
 		}
 
+		document.querySelector("#input").onkeypress = e => {
+			if(e.key == "Enter") {
+				document.querySelector("#add").onclick();
+			}
+		}
+
+		document.querySelector("#login-form").onsubmit = e => {
+			// Stopping <form> submit to server
+			// since this is client-only app
+			e.preventDefault();
+
+			const email = document.querySelector("#email").value;
+			const password = document.querySelector("#password").value;
+			if(!email || !password) {
+				showError("Both email and password required");
+			}
+
+			fetch(`${api}/login`, {
+				method: 'POST',
+				body: JSON.stringify({ email, password }),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			})
+			.then(res => {
+				if(res.ok) {
+
+					res.text().then(token => {
+						if (token) {
+							localStorage.setItem("token", token);
+							init();
+						} else {
+							showError("Invalid token");
+							localStorage.removeItem("token");
+						}
+					});
+
+				} else {
+					showError("Invalid email or password");
+					localStorage.removeItem("token");
+				}
+			});
+		}
+
+		document.querySelector("#logout").onclick = () => {
+			const token = getToken();
+			localStorage.removeItem("token");
+			fetch(`${api}/logout`, {
+				method: 'DELETE',
+				headers: {
+					Authorization: `Bearer ${token}`,
+				}
+			});
+
+			init();
+		}
+
 		function createItem(category) {
+			const token = getToken();
+
 			let li = document.createElement("li");
 			li.classList.add("list-group-item");
 			li.innerHTML = `<span>${category.name}</span>`;
@@ -65,7 +167,7 @@
 			del.setAttribute("href", "#");
 			del.classList.add("fa-solid", "fa-trash", "text-danger", "float-end");
 			del.onclick = () => {
-				fetch(`${api}/${category.id}`, {
+				fetch(`${api}/categories/${category.id}`, {
 					method: 'DELETE',
 					headers: {
 						"Authorization": `Bearer ${token}`,
@@ -79,10 +181,14 @@
 			edit.setAttribute("href", "#");
 			edit.classList.add("fa-solid", "fa-edit", "float-end", "me-3");
 			edit.onclick = () => {
-				let update = prompt("Category Name", li.querySelector("span").textContent);
+				let update = prompt(
+					"Category Name",
+					li.querySelector("span").textContent
+				);
+
 				li.querySelector("span").textContent = update;
 
-				fetch(`${api}/${category.id}`, {
+				fetch(`${api}/categories/${category.id}`, {
 					method: 'PUT',
 					body: JSON.stringify({ name: update }),
 					headers: {
@@ -91,9 +197,30 @@
 					}
 				});
 			}
+
 			li.appendChild(edit);
 
 			document.querySelector("#list").appendChild(li);
+		}
+
+		function showError(msg) {
+			document.querySelector("#error").classList.remove("d-none");
+			document.querySelector("#error").textContent = msg;
+
+			// Hide error after 5 seconds
+			setTimeout(() => {
+				document.querySelector("#error").classList.add("d-none");
+			}, 5000);
+		}
+
+		function showLogin() {
+			document.querySelector("#login").classList.remove("d-none");
+			document.querySelector("#home").classList.add("d-none");
+		}
+
+		function showHome() {
+			document.querySelector("#home").classList.remove("d-none");
+			document.querySelector("#login").classList.add("d-none");
 		}
 	</script>
 </body>

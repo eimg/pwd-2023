@@ -19,7 +19,7 @@
                         <b class="text-success">{{ $article->user->name }}</b>,
                         <b>Category:</b>
                         <span class="text-primary">
-                            {{ $article->category->name }}
+                            {{ $article->category->name ?? "Missing" }}
                         </span>,
                         <b>Comments:</b> {{ count($article->comments) }},
                         {{ $article->created_at->diffForHumans() }}

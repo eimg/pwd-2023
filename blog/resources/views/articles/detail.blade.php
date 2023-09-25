@@ -17,7 +17,7 @@
                     <b class="text-success">{{ $article->user->name }}</b>,
                     <b>Category:</b>
                     <span class="text-primary">
-                        {{ $article->category->name }}
+                        {{ $article->category->name ?? "Missing" }}
                     </span>,
                     <b>Comments:</b> {{ count($article->comments) }},
                     {{ $article->created_at->diffForHumans() }}
@@ -27,13 +27,15 @@
                 </div>
 
                 @auth
-                    @can('delete-article', $article)
                     <div class="mt-2">
-                        <a href="{{ url("/articles/delete/$article->id") }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        @can('delete-article', $article)
+                            <a href="{{ url("/articles/delete/$article->id") }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        @endcan
 
-                        <a href="{{ url("/articles/edit/$article->id") }}" class="btn btn-sm btn-outline-info">Edit</a>
+                        @can('edit-article', $article)
+                            <a href="{{ url("/articles/edit/$article->id") }}" class="btn btn-sm btn-outline-info">Edit</a>
+                        @endcan
                     </div>
-                    @endcan
                 @endauth
             </div>
         </div>

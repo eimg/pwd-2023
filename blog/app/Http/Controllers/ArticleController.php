@@ -87,13 +87,18 @@ class ArticleController extends Controller
         }
 
         $article = Article::find($id);
-        $article->title = request()->title;
-        $article->body = request()->body;
-        $article->category_id = request()->category_id;
-        $article->user_id = auth()->user()->id;
-        $article->save();
 
-        return redirect("/articles/detail/$id");
+        if(Gate::allows('edit-article', $article)) {
+            $article->title = request()->title;
+            $article->body = request()->body;
+            $article->category_id = request()->category_id;
+            $article->user_id = auth()->user()->id;
+            $article->save();
+
+            return redirect("/articles/detail/$id");
+        }
+
+        return redirect("/articles/detail/$id")->with("info", "Unauthorize");
     }
 
     public function delete($id)
